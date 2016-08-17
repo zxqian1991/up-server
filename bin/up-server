@@ -1,0 +1,81 @@
+#!/usr/bin/env node
+var path = require("path");
+var file = require("../services/file.js");
+var server = require("../main");
+var net = require("net")
+var argv = require('minimist')(process.argv.slice(2));
+var console = require("Console");
+var config = {
+	a:100,
+	b:999
+};
+var root = process.cwd();
+/**
+ * [if description]
+ * @param  {[type]} argv['p'] &&            !isNaN(+argv['p']) [description]
+ * @return {[type]}           [description]
+ * -p 指定端口
+ * -P 指定socket端口
+ * -f 指定配置文件或者文件夹
+ * --before 指定before文件夹
+ * -b
+ * --after 指定after文件夹
+ * -a
+ * --router 指定路由文件夹
+ * -r
+ * --host 指定对应的host名称
+ * -h  如果没有指定host，那么所有80
+ * --static -s 指定静态目录的位置 默认当前目录
+ * --state -S 查看当前服务器的运行状态
+ * 
+ * 
+ */
+if(argv['p'] && !isNaN(+argv['p'])) {
+	// 端口
+	config.port = +argv['p'];
+}
+
+var argf = argv['f'] ? argv['f'] : "./up.config.js";
+var cfgPath = path.isAbsolute(argf) ? argf : path.join(root,argf);
+var type = file.getTypeSync(cfgPath);
+// var app = server(config,type ? cfgPath : null);
+try {
+	var server__ = net.createServer(function(socket){
+		console.stress("There Is A Connection From:",socket.remoteAddress,socket.remotePort);
+		socket.on("data",function(data){
+			var data__ = data.toString();
+			console.stress("Data From ",socket.remoteAddress+":"+socket.remotePort,":",data__);
+			console.warn(JSON.parse(data__))
+		});
+		socket.on("close",function(data){
+			console.warn("Closed: ",socket.remoteAddress+":"+socket.remotePort,":",data);
+		})
+	});
+	var port__ = argv['P'] && !isNaN(+argv['P']) ? argv['P'] : 2022;
+	server__.listen(port__);
+	server__.on("error",function(){
+		var client = new net.Socket();
+		client.connect(port__, "127.0.0.1", function() {
+		    console.log('CONNECTED TO: ' + "127.0.0.1:" + ':' + port__);
+		    // 建立连接后立即向服务器发送数据，服务器将收到这些数据
+		    var arr = [config];
+		    type ? arr.push(cfgPath) : '';
+		    client.write(JSON.stringify(arr));;
+		    client.destroy();
+		});
+		client.on('data', function(data) {
+
+		    console.log('DATA: ' + data);
+		    // 完全关闭连接
+		    client.destroy();
+
+		});
+	})
+	server__.on("listening",function(){
+		app = server(config,type ? cfgPath : null);
+		app.$socket = server__;
+
+	})
+}catch(e) {
+	console.log(e);
+}
